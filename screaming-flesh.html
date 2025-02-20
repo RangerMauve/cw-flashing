@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<title>Screaming Flesh</title>
+<style>
+    @import url("agregore://theme/style.css");
+
+    svg {
+        position: fixed;
+        width: 100vw;
+        height: 100vh;
+        top: 0px;
+        left: 0px;
+        margin: 0px;
+    }
+
+    @keyframes shadowMove {
+
+        0%,
+        100% {
+            text-shadow:
+                -40px 0px 4px rgba(255, 255, 255, 0.2),
+                +40px 0px 4px rgba(255, 255, 255, 0.2),
+                -20px -20px 4px rgba(255, 255, 255, 0.2),
+                -20px 20px 4px rgba(255, 255, 255, 0.2),
+                20px -20px 4px rgba(255, 255, 255, 0.2),
+                20px 20px 4px rgba(255, 255, 255, 0.2);
+        }
+
+        50% {
+            text-shadow:
+                20px -20px 4px rgba(255, 255, 255, 0.2),
+                -20px -20px 4px rgba(255, 255, 255, 0.2),
+                40px 0px 4px rgba(255, 255, 255, 0.2),
+                -20px -20px 4px rgba(255, 255, 255, 0.2),
+                20px 20px 4px rgba(255, 255, 255, 0.2),
+                -40px 0px 4px rgba(255, 255, 255, 0.2);
+        }
+    }
+
+    @keyframes fadein {
+        from {
+            opacity: 0%;
+        }
+
+        to {
+            opacity: 100%;
+        }
+    }
+
+    @keyframes pulse {
+
+        0%,
+        100% {
+            background: var(--ag-color-black);
+        }
+
+        50% {
+            background: #000000;
+        }
+    }
+
+    html {
+        animation: pulse 1.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+    }
+
+    svg>g {
+        animation: fadein 1.5s ease-out;
+    }
+
+    text {
+        fill: var(--ag-color-white);
+        font-size: 42px;
+        font-weight: bold;
+        animation: shadowMove 2s ease-in-out infinite;
+    }
+
+    .eyehole {
+        pointer-events: none;
+    }
+
+    .tri {
+        fill: var(--ag-color-purple);
+    }
+
+    .s2 {
+        animation-duration: 1s;
+    }
+
+    .s3 {
+        animation-duration: 4s;
+    }
+
+    .a2 {
+        animation-delay: -1s;
+    }
+
+    .a3 {
+        animation-delay: -0.5s;
+    }
+
+    .a4 {
+        animation-delay: -0.25s;
+    }
+</style>
+<svg viewbox="0 0 666 666"></svg>
+<script type="module">
+
+    const OUTLINE_WIDTH = 10
+
+    const WORDS = [
+        "beast",
+        "flesh",
+        "death",
+        "feast"
+    ]
+
+    const SVG_NS = "http://www.w3.org/2000/svg";
+
+
+    const audioContext = new AudioContext();
+    const panner = audioContext.createPanner();
+    panner.panningModel = 'HRTF';
+    panner.connect(audioContext.destination);
+
+    var bufferSize = 2 * audioContext.sampleRate,
+        noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate),
+        output = noiseBuffer.getChannelData(0);
+    for (var i = 0; i < bufferSize; i++) {
+        output[i] = Math.random() * 2 - 1;
+    }
+
+    var whiteNoise = audioContext.createBufferSource();
+    whiteNoise.buffer = noiseBuffer;
+    whiteNoise.loop = true;
+
+    const gainNode = audioContext.createGain();
+    gainNode.gain.setValueAtTime(0.02, audioContext.currentTime); // Low gain for barely audible noise
+
+    whiteNoise.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    whiteNoise.start(0);
+
+    const screams = await Promise.all([
+        loadSound("./scream.mp3"),
+        loadSound("./scream2.mp3"),
+        loadSound("./scream3.mp3")
+    ])
+
+    document.querySelector('svg').innerHTML = `
+<defs>
+    <radialGradient id="grad1" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+        <stop offset="0%" style="stop-color:rgb(0,0,0); stop-opacity:0"/>
+        <stop offset="26%" style="stop-color:rgb(0,0,0); stop-opacity:0.08"/>
+        <stop offset="40%" style="stop-color:rgb(0,0,0); stop-opacity:1"/>
+    </radialGradient>
+</defs>
+<g transform="rotate(0, 333 333) translate(333, 333)">
+    ${makeWord()}
+    ${makeWord()}
+    ${makeWord()}
+    ${makeWord()}
+    ${makeWord()}
+    ${makeWord()}
+    ${makeWord()}
+    ${makeWord()}
+    ${makeWord()}
+    ${makeWord()}
+    ${makeWord()}
+</g>
+<rect class="eyehole" x="-666" y="-666" width="1998" height="1998" fill="url(#grad1)"/>
+`
+
+    const group = document.querySelector('svg > g')
+
+    screamForever()
+
+    window.killme = killme
+
+    function killme(word) {
+        word.parentElement.removeChild(word)
+        spawnWord()
+    }
+
+    function screamForever() {
+        setTimeout(() => {
+            killAndSpawnAndScream()
+            screamForever()
+        }, Math.random() * 420 * 10)
+    }
+
+    function killAndSpawnAndScream() {
+        group.removeChild(group.children[0])
+        spawnWord()
+    }
+
+    function spawnWord() {
+        const point = randomPoint()
+        const word = makeWord(point)
+        const added = document.createElementNS(SVG_NS, 'g')
+        added.innerHTML = word
+        group.append(added)
+        scream(...point)
+    }
+
+    function makeWord(point = randomPoint()) {
+        return `<text
+          onclick="killme(this)"
+          class="${randomOffsetClass()} ${randomDurationClass()}"
+          ${textPoint(...point)}
+        >${randomText()}</text>`
+    }
+
+    async function loadSound(path) {
+        const request = await fetch(path)
+        const data = await request.arrayBuffer()
+        const audioBuffer = await audioContext.decodeAudioData(data);
+        return audioBuffer
+    }
+
+    async function scream(theta, scale) {
+        const x = xAt(theta) * scale / (666 / 3 * 2); // -1 to 1
+        const y = yAt(theta); // -1 to 1
+        panner.setPosition(x, -0.5, y);
+        const source = audioContext.createBufferSource()
+        source.buffer = randomElement(screams)
+
+        source.connect(panner);
+        source.onended = () => {
+            source.disconnect();
+            // Reset the BufferSource here if needed
+        };
+        source.start();
+    }
+
+    function randomOffsetClass() {
+        return randomElement(['a1', 'a2', 'a3', 'a4'])
+    }
+    function randomDurationClass() {
+        return randomElement(['s1', 's2', 's3'])
+    }
+
+    function randomText() {
+        return randomElement(WORDS).toUpperCase()
+    }
+
+    function randomElement(arr) {
+        return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function randomPoint(min = 0, max = 666 / 3 * 2) {
+        const theta = Math.random() * 360
+        const scale = min + (max - min) * Math.random()
+        return [theta, scale]
+    }
+
+    function makeCorners(n, offset = 0) {
+        const increment = 360 / n
+        const corners = []
+        for (let i = 0; i < n; i++) {
+            corners.push(i * increment + offset)
+        }
+
+        return corners
+    }
+
+    function anglesToPath(angles, scale) {
+        return angles.map((theta, index) => {
+            const command = (index === 0) ? 'M' : 'L'
+            return `${command} ${(xAt(theta) * scale).toFixed(2)} ${(yAt(theta) * scale).toFixed(2)} `
+        }).join(' ')
+    }
+
+    function lineBetween(theta1, theta2, scale, className = "outline") {
+        return `< line class="${className}" ${linePoint(theta1, scale, 1)} ${linePoint(theta2, scale, 2)} />`
+    }
+
+    function linePoint(theta, scale = 0, index = "") {
+        return `x${index}="${xAt(theta) * scale}" y${index}="${yAt(theta) * scale}"`
+    }
+
+    function centerPoint(theta, scale = 0) {
+        return `cx="${xAt(theta) * scale}" cy="${yAt(theta) * scale}"`
+    }
+
+    function textPoint(theta, scale = 0) {
+        return `x="${xAt(theta) * scale}" y="${yAt(theta) * scale}" text-anchor="middle" `
+    }
+
+    function xAt(theta) {
+        return Math.cos(toRad(theta))
+    }
+
+    function yAt(theta) {
+        return Math.sin(toRad(theta))
+    }
+
+    function toRad(theta) {
+        return Math.PI / 180 * theta
+    }
+
+    function pointDistance(theta1, theta2, scale) {
+        const x1 = xAt(theta1) * scale
+        const y1 = yAt(theta1) * scale
+
+        const x2 = xAt(theta2) * scale
+        const y2 = yAt(theta2) * scale
+
+        return distance(x1, y1, x2, y2)
+    }
+
+    function distance(x1, y1, x2, y2) {
+        const x = Math.abs(x1 - x2)
+        const y = Math.abs(y1 - y2)
+        return Math.sqrt(x ** 2 + y ** 2)
+    }
+</script>
