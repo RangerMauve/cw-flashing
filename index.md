@@ -1,6 +1,7 @@
 # CW Flashing
 
 [001 Eye Am One](./eye-am-one.html)
+[002 Screaming Flesh](./screaming-flesh.html)
 
 <style>
 @keyframes colorchange {
